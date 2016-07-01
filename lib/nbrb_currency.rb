@@ -9,6 +9,7 @@ class NbrbCurrency < Money::Bank::VariableExchange
 
   NBRB_RATES_URL = 'http://nbrb.by/Services/XmlExRates.aspx'
   CURRENCIES = %w(AUD BGN UAH DKK USD EUR PLN JPY IRR ISK CAD CNY KWD LVL LTL MDL NOK RUB SGD KGS KZT TRY GBP CZK SEK CHF)
+  DENOMINATION_RATE = 10_000
 
   def update_rates(cache=nil)
     exchange_rates(cache).each do |exchange_rate|
@@ -16,8 +17,10 @@ class NbrbCurrency < Money::Bank::VariableExchange
       currency = exchange_rate.xpath("CharCode").text
       scale = exchange_rate.xpath("Scale").text
       next if currency == "XDR"
-      add_rate(currency, "BYR", (BigDecimal.new(rate) / BigDecimal.new(scale)).to_f)
+      add_rate(currency, "BYN", (BigDecimal.new(rate) / BigDecimal.new(scale)).to_f)
+      add_rate(currency, "BYR", (BigDecimal.new(rate) / BigDecimal.new(scale)).to_f * DENOMINATION_RATE)
     end
+    add_rate("BYN", "BYN", 1)
     add_rate("BYR", "BYR", 1)
   end
 
@@ -36,8 +39,8 @@ class NbrbCurrency < Money::Bank::VariableExchange
   def exchange_with(from, to_currency)
     rate = get_rate(from.currency, to_currency)
     unless rate
-      from_base_rate = get_rate(from.currency, "BYR")
-      to_base_rate = get_rate(to_currency, "BYR")
+      from_base_rate = get_rate(from.currency, "BYN")
+      to_base_rate = get_rate(to_currency, "BYN")
       rate = (BigDecimal.new(from_base_rate, 8) / BigDecimal.new(to_base_rate, 8)).to_f
       raise "Rate #{from.currency} - #{to_currency} unknown!" unless rate
     end
